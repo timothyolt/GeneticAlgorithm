@@ -3,9 +3,12 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 const int candidates(6);
 const int candidateSize(5);
+const float keep(0.5f);
+const float mutateRate(0.1f);
 
 struct sample {
   std::string code;
@@ -22,6 +25,10 @@ void printSamples(const std::vector<sample> &samples);
 unsigned int toUnsignedInt(const std::string &string);
 
 double fitness(unsigned int value);
+
+void crossover(std::vector<sample>& samples);
+
+void mutate(std::vector<sample>& samples);
 
 int main() {
   srand((unsigned int) time(0));
@@ -40,9 +47,27 @@ int main() {
     // evaluate fitness function
     samples[i] = sample(temp);
   }
+  std::cout << "Sorted: " << std::endl;
   printSamples(samples);
+  std::sort(samples.begin(), samples.end(), [](sample a, sample b) { return b.fit < a.fit; });
+  std::cout << "Sorted: " << std::endl;
+  printSamples(samples);
+  crossover(samples);
+  std::cout << "Crossover: " << std::endl;
+  printSamples(samples);
+  mutate(samples);
+  std::cout << "Mutate: " << std::endl;
+  printSamples(samples);
+
   return 0;
 }
+
+sample::sample() : code(""), value(0), fit(0) {}
+
+sample::sample(std::string code) :
+    code(code),
+    value(toUnsignedInt(code)),
+    fit(fitness(value)) {}
 
 void printSamples(const std::vector<sample> &samples) {
   for (int i(0); i < samples.size(); ++i) {
@@ -64,9 +89,28 @@ double fitness(unsigned int value) {
   return pow(value, 2);
 }
 
-sample::sample() : code(""), value(0), fit(0) {}
+void crossover(std::vector<sample>& samples) {
+  std::vector<sample> results;
+  for (auto i(0); i < (candidates * keep); ++i) {
+    sample one = samples[(rand() % candidates) * keep];
+    sample two = samples[(rand() % candidates) * keep];
 
-sample::sample(std::string code) :
-    code(code),
-    value(toUnsignedInt(code)),
-    fit(fitness(value)) {}
+    int cut((rand() % candidateSize));
+
+    results.push_back(sample(one.code.substr(0, cut) + two.code.substr(cut, candidateSize - cut)));
+    results.push_back(sample(two.code.substr(0, cut) + one.code.substr(cut, candidateSize - cut)));
+  }
+  std::copy(results.begin(), results.end(), samples.begin());
+  return;
+}
+
+void mutate(std::vector<sample> &samples) {
+  for (auto i(0); i < candidates; ++i) {
+    if (((rand() % 10) / 10.0f) < mutateRate) {
+      // choose element
+      int index(rand() % candidateSize);
+      samples[i].code[index] = (samples[i].code[index] == '0' ? '1' : '0');
+    }
+  }
+  return;
+}
